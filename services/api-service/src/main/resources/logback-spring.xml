@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- OpenTelemetry MDC instrumentation - auto-injects trace_id and span_id -->
+    <appender name="OTEL_CONSOLE" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- These MDC keys are auto-populated by OpenTelemetry -->
+                <includeMdcKeyName>trace_id</includeMdcKeyName>
+                <includeMdcKeyName>span_id</includeMdcKeyName>
+                <includeMdcKeyName>trace_flags</includeMdcKeyName>
+                <!-- Custom fields for service identification -->
+                <customFields>{"service_name":"api-service"}</customFields>
+                <!-- Add caller info for debugging -->
+                <includeCallerData>true</includeCallerData>
+            </encoder>
+        </appender>
+    </appender>
+
+    <!-- Fallback plain console for non-OTel contexts -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>trace_id</includeMdcKeyName>
+            <includeMdcKeyName>span_id</includeMdcKeyName>
+            <customFields>{"service_name":"api-service"}</customFields>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="OTEL_CONSOLE"/>
+    </root>
+
+    <!-- Debug level for our application code -->
+    <logger name="com.demo" level="DEBUG"/>
+
+    <!-- Reduce noise from libraries -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.apache" level="WARN"/>
+</configuration>

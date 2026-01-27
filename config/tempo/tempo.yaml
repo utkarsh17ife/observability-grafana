@@ -50,14 +50,19 @@ metrics_generator:
         - service.name
         - http.method
         - http.status_code
+        - http.route
+        - http.target
+      enable_target_info: true
+      histogram_buckets: [0.002, 0.004, 0.008, 0.016, 0.032, 0.064, 0.128, 0.256, 0.512, 1.024, 2.048, 4.096, 8.192, 16.384]
     service_graphs:
       dimensions:
         - service.name
+      enable_client_server_prefix: true
+    local_blocks:
+      max_live_traces: 100000
 
 overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]
+  metrics_generator_processors: [service-graphs, span-metrics, local-blocks]
 
 querier:
   search:

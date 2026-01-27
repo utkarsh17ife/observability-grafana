@@ -72,3 +72,8 @@ datasources:
         hide: false
       lokiSearch:
         datasourceUid: loki
+      # Enable TraceQL metrics generation
+      traceqlSearch:
+        enabled: true
+      spanBar:
+        type: Duration

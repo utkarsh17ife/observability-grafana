@@ -1,32 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- OpenTelemetry MDC instrumentation - auto-injects trace_id and span_id -->
-    <appender name="OTEL_CONSOLE" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
-        <appender class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <!-- These MDC keys are auto-populated by OpenTelemetry -->
-                <includeMdcKeyName>trace_id</includeMdcKeyName>
-                <includeMdcKeyName>span_id</includeMdcKeyName>
-                <includeMdcKeyName>trace_flags</includeMdcKeyName>
-                <!-- Custom fields for service identification -->
-                <customFields>{"service_name":"worker-service"}</customFields>
-                <!-- Add caller info for debugging -->
-                <includeCallerData>true</includeCallerData>
-            </encoder>
-        </appender>
-    </appender>
-
-    <!-- Fallback plain console for non-OTel contexts -->
+    <!-- Standard console appender with JSON output -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- These MDC keys are auto-populated by OpenTelemetry Java agent -->
             <includeMdcKeyName>trace_id</includeMdcKeyName>
             <includeMdcKeyName>span_id</includeMdcKeyName>
+            <includeMdcKeyName>trace_flags</includeMdcKeyName>
+            <!-- Custom fields for service identification -->
             <customFields>{"service_name":"worker-service"}</customFields>
         </encoder>
     </appender>
 
+    <!-- Wrap with OpenTelemetry appender to ensure trace context is in MDC -->
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="CONSOLE"/>
+    </appender>
+
     <root level="INFO">
-        <appender-ref ref="OTEL_CONSOLE"/>
+        <appender-ref ref="OTEL"/>
     </root>
 
     <!-- Debug level for our application code -->

@@ -1,0 +1,315 @@
+# =============================================================================
+# INFRASTRUCTURE SERVICES - CONSOLIDATED VALUES
+# =============================================================================
+# MinIO, Docker Registry, Elasticsearch, Kibana
+# Uses Kubernetes Local Persistent Volumes
+# =============================================================================
+
+# =============================================================================
+# MINIO
+# =============================================================================
+# Distributed MinIO deployment for high availability
+# Provides S3-compatible storage for applications
+
+mode: distributed
+replicas: 4
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1
+    memory: 2Gi
+
+persistence:
+  enabled: true
+  storageClass: local-storage
+  size: 50Gi
+
+consoleService:
+  type: ClusterIP
+  port: 9001
+
+service:
+  type: ClusterIP
+  port: 9000
+
+ingress:
+  enabled: false
+  # ingressClassName: nginx
+  # annotations:
+  #   nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  # hosts:
+  #   - minio.your-domain.com
+
+consoleIngress:
+  enabled: false
+  # ingressClassName: nginx
+  # hosts:
+  #   - minio-console.your-domain.com
+
+buckets:
+  - name: artifacts
+    policy: none
+    purge: false
+  - name: backups
+    policy: none
+    purge: false
+  - name: logs
+    policy: none
+    purge: false
+  - name: registry-storage
+    policy: none
+    purge: false
+  # Buckets for observability stack
+  - name: loki-chunks
+    policy: none
+    purge: false
+  - name: loki-ruler
+    policy: none
+    purge: false
+  - name: tempo-traces
+    policy: none
+    purge: false
+
+environment:
+  MINIO_BROWSER_REDIRECT_URL: ""
+
+metrics:
+  serviceMonitor:
+    # Disable until observability stack is installed (requires Prometheus Operator CRDs)
+    enabled: false
+    namespace: observability
+    interval: 30s
+
+# =============================================================================
+# DOCKER REGISTRY
+# =============================================================================
+# Private container registry for hosting application images
+
+replicaCount: 1
+
+image:
+  repository: registry
+  tag: 2.8.3
+
+# Registry persistence (uses local-storage)
+# persistence:
+#   enabled: true
+#   storageClass: local-storage
+#   size: 100Gi
+#   accessMode: ReadWriteOnce
+
+# Service configuration
+# service:
+#   type: ClusterIP
+#   port: 5000
+
+# Enable garbage collection
+configData:
+  version: 0.1
+  log:
+    fields:
+      service: registry
+  storage:
+    cache:
+      blobdescriptor: inmemory
+    filesystem:
+      rootdirectory: /var/lib/registry
+    delete:
+      enabled: true
+    maintenance:
+      uploadpurging:
+        enabled: true
+        age: 168h
+        interval: 24h
+        dryrun: false
+  http:
+    addr: :5000
+    headers:
+      X-Content-Type-Options: [nosniff]
+  health:
+    storagedriver:
+      enabled: true
+      interval: 10s
+      threshold: 3
+
+# =============================================================================
+# ELASTICSEARCH
+# =============================================================================
+# Distributed search and analytics engine
+
+# Elasticsearch cluster configuration
+clusterName: elasticsearch
+nodeGroup: master
+
+# Replicas for master-eligible nodes
+replicas: 3
+
+# Minimum master nodes for quorum
+minimumMasterNodes: 2
+
+# Resource allocation
+esResources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+
+# JVM heap size (should be ~50% of memory limit)
+esJavaOpts: "-Xmx2g -Xms2g"
+
+# Volume claim template for local storage
+volumeClaimTemplate:
+  storageClassName: local-storage
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 100Gi
+
+# Network settings
+protocol: http
+httpPort: 9200
+transportPort: 9300
+
+# Security settings
+secret:
+  enabled: true
+  # password set via --set in install.sh
+
+# Disable xpack security for internal cluster (enable for production)
+esConfig:
+  elasticsearch.yml: |
+    xpack.security.enabled: false
+    xpack.security.enrollment.enabled: false
+    xpack.security.http.ssl.enabled: false
+    xpack.security.transport.ssl.enabled: false
+    cluster.initial_master_nodes:
+      - elasticsearch-master-0
+      - elasticsearch-master-1
+      - elasticsearch-master-2
+
+# Pod disruption budget
+maxUnavailable: 1
+
+# Readiness probe
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  successThreshold: 3
+  timeoutSeconds: 5
+
+# Anti-affinity for HA
+antiAffinity: soft
+
+# Service
+esService:
+  type: ClusterIP
+  httpPortName: http
+  transportPortName: transport
+
+# =============================================================================
+# KIBANA
+# =============================================================================
+# Visualization dashboard for Elasticsearch
+
+elasticsearchHosts: "http://elasticsearch-master:9200"
+
+kibanaResources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1
+    memory: 1Gi
+
+# Kibana service
+kibanaService:
+  type: ClusterIP
+  port: 5601
+
+# Health checks
+healthCheckPath: "/app/kibana"
+
+kibanaConfig:
+  kibana.yml: |
+    server.host: "0.0.0.0"
+    server.shutdownTimeout: "5s"
+    elasticsearch.hosts: ["http://elasticsearch-master:9200"]
+    monitoring.ui.container.elasticsearch.enabled: true
+
+# =============================================================================
+# SAMPLE JAVA APPLICATION DEPLOYMENT TEMPLATE
+# =============================================================================
+# Save this as a separate file (e.g., java-app.yaml) and customize
+# Deploy with: kubectl apply -f java-app.yaml
+#
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: my-java-app
+#   namespace: applications
+# spec:
+#   replicas: 2
+#   selector:
+#     matchLabels:
+#       app: my-java-app
+#   template:
+#     metadata:
+#       labels:
+#         app: my-java-app
+#       annotations:
+#         prometheus.io/scrape: "true"
+#         prometheus.io/port: "8080"
+#         prometheus.io/path: "/actuator/prometheus"
+#     spec:
+#       imagePullSecrets:
+#         - name: regcred
+#       containers:
+#         - name: app
+#           image: registry-docker-registry.infrastructure.svc.cluster.local:5000/my-java-app:latest
+#           ports:
+#             - containerPort: 8080
+#           env:
+#             - name: OTEL_EXPORTER_OTLP_ENDPOINT
+#               value: "http://otel-gateway-opentelemetry-collector.observability.svc.cluster.local:4317"
+#             - name: OTEL_SERVICE_NAME
+#               value: "my-java-app"
+#             - name: SPRING_ELASTICSEARCH_URIS
+#               value: "http://elasticsearch-master.infrastructure.svc.cluster.local:9200"
+#             - name: S3_ENDPOINT
+#               value: "http://minio.infrastructure.svc.cluster.local:9000"
+#           resources:
+#             requests:
+#               cpu: 500m
+#               memory: 512Mi
+#             limits:
+#               cpu: 2
+#               memory: 2Gi
+#           livenessProbe:
+#             httpGet:
+#               path: /actuator/health/liveness
+#               port: 8080
+#             initialDelaySeconds: 60
+#           readinessProbe:
+#             httpGet:
+#               path: /actuator/health/readiness
+#               port: 8080
+#             initialDelaySeconds: 30
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: my-java-app
+#   namespace: applications
+# spec:
+#   selector:
+#     app: my-java-app
+#   ports:
+#     - port: 80
+#       targetPort: 8080

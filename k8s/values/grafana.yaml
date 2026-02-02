@@ -1,0 +1,62 @@
+# Grafana values
+persistence:
+  enabled: false
+
+admin:
+  existingSecret: grafana-admin
+  userKey: admin-user
+  passwordKey: admin-password
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        url: http://vm-victoria-metrics-k8s-stack-vmselect.observability.svc.cluster.local:8481/select/0/prometheus
+        isDefault: true
+        jsonData:
+          timeInterval: 30s
+
+      - name: Loki
+        type: loki
+        url: http://loki-gateway.observability.svc.cluster.local
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: '"traceId":"(\w+)"'
+              name: TraceID
+              url: '$${__value.raw}'
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        url: http://tempo-query-frontend.observability.svc.cluster.local:3100
+        jsonData:
+          tracesToLogs:
+            datasourceUid: loki
+            tags: ['job', 'instance', 'pod', 'namespace']
+          serviceMap:
+            datasourceUid: VictoriaMetrics
+          nodeGraph:
+            enabled: true
+          lokiSearch:
+            datasourceUid: loki
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+serviceAccount:
+  create: true
+  name: grafana

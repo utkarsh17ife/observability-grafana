@@ -50,14 +50,13 @@ volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Retain
 EOF
 
-# Create local PVs for MinIO (4 nodes for distributed mode)
-echo "Creating Local Persistent Volumes for MinIO..."
-for i in 0 1 2 3; do
+# Create local PV for MinIO
+echo "Creating Local Persistent Volume for MinIO..."
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: minio-pv-${i}
+  name: minio-pv-0
   labels:
     type: local
     app: minio
@@ -69,35 +68,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: ${DATA_DIR}/minio-${i}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: Exists
-EOF
-done
-
-# Create local PV for Registry
-echo "Creating Local Persistent Volume for Registry..."
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: registry-pv-0
-  labels:
-    type: local
-    app: registry
-spec:
-  storageClassName: local-storage
-  capacity:
-    storage: 100Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  local:
-    path: ${DATA_DIR}/registry
+    path: ${DATA_DIR}/minio
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -106,14 +77,13 @@ spec:
               operator: Exists
 EOF
 
-# Create local PVs for VictoriaMetrics (2 storage nodes)
-echo "Creating Local Persistent Volumes for VictoriaMetrics..."
-for i in 0 1; do
+# Create local PV for VictoriaMetrics
+echo "Creating Local Persistent Volume for VictoriaMetrics..."
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: victoriametrics-pv-${i}
+  name: victoriametrics-pv-0
   labels:
     type: local
     app: victoriametrics
@@ -125,64 +95,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: ${DATA_DIR}/victoriametrics-${i}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: Exists
-EOF
-done
-
-# Create local PVs for Loki ingesters (3 nodes)
-echo "Creating Local Persistent Volumes for Loki..."
-for i in 0 1 2; do
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: loki-pv-${i}
-  labels:
-    type: local
-    app: loki
-spec:
-  storageClassName: local-storage
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  local:
-    path: ${DATA_DIR}/loki-${i}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: Exists
-EOF
-done
-
-# Create local PV for Grafana
-echo "Creating Local Persistent Volume for Grafana..."
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: grafana-pv-0
-  labels:
-    type: local
-    app: grafana
-spec:
-  storageClassName: local-storage
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  local:
-    path: ${DATA_DIR}/grafana
+    path: ${DATA_DIR}/victoriametrics
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -272,14 +185,8 @@ echo ""
 echo "=========================================="
 echo "IMPORTANT: Create directories on nodes BEFORE pods schedule:"
 echo "=========================================="
-echo "  # Infrastructure services"
-echo "  mkdir -p ${DATA_DIR}/minio-{0,1,2,3}"
-echo "  mkdir -p ${DATA_DIR}/registry"
-echo ""
-echo "  # Observability services (for observability stack)"
-echo "  mkdir -p ${DATA_DIR}/victoriametrics-{0,1}"
-echo "  mkdir -p ${DATA_DIR}/loki-{0,1,2}"
-echo "  mkdir -p ${DATA_DIR}/grafana"
+echo "  mkdir -p ${DATA_DIR}/minio"
+echo "  mkdir -p ${DATA_DIR}/victoriametrics"
 fi
 echo ""
 echo "=========================================="

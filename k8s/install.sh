@@ -76,14 +76,14 @@ kubectl run minio-mc --rm -i --restart=Never \
 echo "Installing VictoriaMetrics..."
 helm upgrade --install vm vm/victoria-metrics-k8s-stack \
   -n $NAMESPACE \
-  -f values.yaml \
+  -f values/vm.yaml \
   --set-string vmagent.spec.externalLabels.cluster=$CLUSTER_NAME
 
 # Install Loki with MinIO configuration
 echo "Installing Loki..."
 helm upgrade --install loki grafana/loki-distributed \
   -n $NAMESPACE \
-  -f values.yaml \
+  -f values/loki.yaml \
   --set "loki.structuredConfig.storage_config.aws.access_key_id=$MINIO_ACCESS_KEY" \
   --set "loki.structuredConfig.storage_config.aws.secret_access_key=$MINIO_SECRET_KEY"
 
@@ -91,13 +91,13 @@ helm upgrade --install loki grafana/loki-distributed \
 echo "Installing Promtail..."
 helm upgrade --install promtail grafana/promtail \
   -n $NAMESPACE \
-  -f values.yaml
+  -f values/promtail.yaml
 
 # Install Tempo with MinIO configuration
 echo "Installing Tempo..."
 helm upgrade --install tempo grafana/tempo-distributed \
   -n $NAMESPACE \
-  -f values.yaml \
+  -f values/tempo.yaml \
   --set "storage.trace.s3.access_key=$MINIO_ACCESS_KEY" \
   --set "storage.trace.s3.secret_key=$MINIO_SECRET_KEY"
 
@@ -105,25 +105,29 @@ helm upgrade --install tempo grafana/tempo-distributed \
 echo "Installing OpenTelemetry Collector (DaemonSet)..."
 helm upgrade --install otel-daemon open-telemetry/opentelemetry-collector \
   -n $NAMESPACE \
-  -f values.yaml \
   --set mode=daemonset \
+  --set image.repository=otel/opentelemetry-collector-contrib \
   --set presets.kubernetesAttributes.enabled=true \
   --set presets.kubeletMetrics.enabled=true \
-  --set presets.hostMetrics.enabled=true
+  --set presets.hostMetrics.enabled=true \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=otel-daemon
 
 # Install OpenTelemetry Collector (Gateway)
 echo "Installing OpenTelemetry Collector (Gateway)..."
 helm upgrade --install otel-gateway open-telemetry/opentelemetry-collector \
   -n $NAMESPACE \
-  -f values.yaml \
   --set mode=deployment \
-  --set replicaCount=3
+  --set image.repository=otel/opentelemetry-collector-contrib \
+  --set replicaCount=1 \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=otel-gateway
 
 # Install Grafana
 echo "Installing Grafana..."
 helm upgrade --install grafana grafana/grafana \
   -n $NAMESPACE \
-  -f values.yaml
+  -f values/grafana.yaml
 
 echo ""
 echo "=== Installation Complete ==="

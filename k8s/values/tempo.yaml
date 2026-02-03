@@ -10,6 +10,14 @@ storage:
       insecure: true
     blocklist_poll: 5m
 
+# Enable OTLP receiver
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+
 tempo:
   retention: 720h
   resources:

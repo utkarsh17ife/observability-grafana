@@ -1,19 +1,10 @@
-# Grafana values
+adminUser: admin
+adminPassword: admin
+
 persistence:
-  enabled: false
-
-admin:
-  existingSecret: grafana-admin
-  userKey: admin-user
-  passwordKey: admin-password
-
-resources:
-  requests:
-    cpu: 250m
-    memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
+  enabled: true
+  size: 1Gi
+  storageClassName: hostpath
 
 datasources:
   datasources.yaml:
@@ -21,14 +12,18 @@ datasources:
     datasources:
       - name: VictoriaMetrics
         type: prometheus
-        url: http://vm-victoria-metrics-k8s-stack-vmselect.observability.svc.cluster.local:8481/select/0/prometheus
+        uid: prometheus
+        access: proxy
+        url: http://vmselect-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8481/select/0/prometheus
         isDefault: true
         jsonData:
           timeInterval: 30s
 
       - name: Loki
         type: loki
-        url: http://loki-gateway.observability.svc.cluster.local
+        uid: loki
+        access: proxy
+        url: http://loki-loki-distributed-gateway.observability.svc.cluster.local
         jsonData:
           derivedFields:
             - datasourceUid: tempo
@@ -39,24 +34,25 @@ datasources:
       - name: Tempo
         type: tempo
         uid: tempo
+        access: proxy
         url: http://tempo-query-frontend.observability.svc.cluster.local:3100
         jsonData:
-          tracesToLogs:
+          tracesToLogsV2:
             datasourceUid: loki
             tags: ['job', 'instance', 'pod', 'namespace']
+          tracesToMetrics:
+            datasourceUid: prometheus
           serviceMap:
-            datasourceUid: VictoriaMetrics
+            datasourceUid: prometheus
           nodeGraph:
             enabled: true
           lokiSearch:
             datasourceUid: loki
 
-service:
-  type: ClusterIP
-
-ingress:
-  enabled: false
-
-serviceAccount:
-  create: true
-  name: grafana
+# Enable useful features
+grafana.ini:
+  feature_toggles:
+    enable: traceqlEditor tempoSearch tempoBackendSearch traceToMetrics metricsSummary
+  auth.anonymous:
+    enabled: true
+    org_role: Admin

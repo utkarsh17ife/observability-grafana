@@ -6,7 +6,6 @@ INFRA_NAMESPACE="infrastructure"
 CLUSTER_NAME="${CLUSTER_NAME:-your-cluster-name}"
 MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-admin}"
 MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-changeme123}"
-GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin123}"
 
 echo "=== Observability Stack Installation ==="
 echo "Namespace: $NAMESPACE"
@@ -49,14 +48,6 @@ kubectl create secret generic minio-credentials \
   -n $NAMESPACE \
   --from-literal=access_key=$MINIO_ACCESS_KEY \
   --from-literal=secret_key=$MINIO_SECRET_KEY \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-# Create Grafana admin secret
-echo "Creating Grafana admin secret..."
-kubectl create secret generic grafana-admin \
-  -n $NAMESPACE \
-  --from-literal=admin-user=admin \
-  --from-literal=admin-password=$GRAFANA_ADMIN_PASSWORD \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Create MinIO buckets for Loki and Tempo using mc (MinIO Client)
@@ -117,11 +108,7 @@ helm upgrade --install otel-daemon open-telemetry/opentelemetry-collector \
 echo "Installing OpenTelemetry Collector (Gateway)..."
 helm upgrade --install otel-gateway open-telemetry/opentelemetry-collector \
   -n $NAMESPACE \
-  --set mode=deployment \
-  --set image.repository=otel/opentelemetry-collector-contrib \
-  --set replicaCount=1 \
-  --set serviceAccount.create=true \
-  --set serviceAccount.name=otel-gateway
+  -f values/otel-gateway.yaml
 
 # Install Grafana
 echo "Installing Grafana..."
@@ -140,7 +127,7 @@ echo "Grafana:"
 echo "  kubectl port-forward svc/grafana 3000:80 -n $NAMESPACE"
 echo "  URL: http://localhost:3000"
 echo "  User: admin"
-echo "  Password: $GRAFANA_ADMIN_PASSWORD"
+echo "  Password: admin"
 echo ""
 echo "VictoriaMetrics (Prometheus API):"
 echo "  kubectl port-forward svc/vm-victoria-metrics-k8s-stack-vmselect 8481:8481 -n $NAMESPACE"

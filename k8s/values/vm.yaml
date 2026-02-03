@@ -56,3 +56,8 @@ vmagent:
       limits:
         cpu: 500m
         memory: 512Mi
+
+# Grafana bundled with VM stack
+# Disable bundled Grafana - using separate Grafana helm chart
+grafana:
+  enabled: false

@@ -39,8 +39,18 @@ kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f 
 echo "Adding Helm repositories..."
 helm repo add vm https://victoriametrics.github.io/helm-charts/
 helm repo add grafana https://grafana.github.io/helm-charts
+helm repo add grafana-community https://grafana-community.github.io/helm-charts
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 helm repo update
+
+# Install VictoriaMetrics Operator CRDs first
+echo "Installing VictoriaMetrics Operator..."
+helm upgrade --install vm-operator vm/victoria-metrics-operator \
+  -n $NAMESPACE \
+  --wait
+
+echo "Waiting for VM Operator to be ready..."
+kubectl wait --for=condition=available deployment/vm-operator-victoria-metrics-operator -n $NAMESPACE --timeout=120s
 
 # Create MinIO credentials secret for Loki and Tempo
 echo "Creating MinIO credentials secret..."
@@ -86,7 +96,7 @@ helm upgrade --install promtail grafana/promtail \
 
 # Install Tempo with MinIO configuration
 echo "Installing Tempo..."
-helm upgrade --install tempo grafana/tempo-distributed \
+helm upgrade --install tempo grafana-community/tempo-distributed \
   -n $NAMESPACE \
   -f values/tempo.yaml \
   --set "storage.trace.s3.access_key=$MINIO_ACCESS_KEY" \
@@ -96,13 +106,7 @@ helm upgrade --install tempo grafana/tempo-distributed \
 echo "Installing OpenTelemetry Collector (DaemonSet)..."
 helm upgrade --install otel-daemon open-telemetry/opentelemetry-collector \
   -n $NAMESPACE \
-  --set mode=daemonset \
-  --set image.repository=otel/opentelemetry-collector-contrib \
-  --set presets.kubernetesAttributes.enabled=true \
-  --set presets.kubeletMetrics.enabled=true \
-  --set presets.hostMetrics.enabled=true \
-  --set serviceAccount.create=true \
-  --set serviceAccount.name=otel-daemon
+  -f values/otel-daemon.yaml
 
 # Install OpenTelemetry Collector (Gateway)
 echo "Installing OpenTelemetry Collector (Gateway)..."
@@ -110,9 +114,20 @@ helm upgrade --install otel-gateway open-telemetry/opentelemetry-collector \
   -n $NAMESPACE \
   -f values/otel-gateway.yaml
 
-# Install Grafana
+# Create Grafana dashboard ConfigMap
+echo "Creating Grafana dashboard ConfigMap..."
+kubectl create configmap grafana-dashboards \
+  --from-file=jvm-services.json=dashboards/jvm-services.json \
+  --from-file=pod-logs.json=dashboards/pod-logs.json \
+  --from-file=deployment-logs.json=dashboards/deployment-logs.json \
+  --from-file=traces.json=dashboards/traces.json \
+  -n $NAMESPACE \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl label configmap grafana-dashboards grafana_dashboard=1 -n $NAMESPACE --overwrite
+
+# Install Grafana (using community chart)
 echo "Installing Grafana..."
-helm upgrade --install grafana grafana/grafana \
+helm upgrade --install grafana grafana-community/grafana \
   -n $NAMESPACE \
   -f values/grafana.yaml
 
@@ -130,16 +145,16 @@ echo "  User: admin"
 echo "  Password: admin"
 echo ""
 echo "VictoriaMetrics (Prometheus API):"
-echo "  kubectl port-forward svc/vm-victoria-metrics-k8s-stack-vmselect 8481:8481 -n $NAMESPACE"
+echo "  kubectl port-forward svc/vmselect-vm-victoria-metrics-k8s-stack 8481:8481 -n $NAMESPACE"
 echo "  URL: http://localhost:8481/select/0/prometheus"
 echo ""
 echo "Loki:"
-echo "  kubectl port-forward svc/loki-gateway 3100:80 -n $NAMESPACE"
+echo "  kubectl port-forward svc/loki-loki-distributed-gateway 3100:80 -n $NAMESPACE"
 echo "  URL: http://localhost:3100"
 echo ""
 echo "Tempo:"
-echo "  kubectl port-forward svc/tempo-query-frontend 3200:3100 -n $NAMESPACE"
-echo "  URL: http://localhost:3200"
+echo "  kubectl port-forward svc/tempo-query-frontend 3100:3100 -n $NAMESPACE"
+echo "  URL: http://localhost:3100"
 echo ""
 echo "=========================================="
 echo "Application Integration:"
@@ -152,3 +167,6 @@ echo ""
 echo "Example environment variables for Java apps:"
 echo "  OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-gateway-opentelemetry-collector.$NAMESPACE.svc.cluster.local:4317"
 echo "  OTEL_SERVICE_NAME=my-service"
+echo ""
+echo "Deploy sample services:"
+echo "  kubectl apply -f services/"

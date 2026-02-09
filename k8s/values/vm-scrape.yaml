@@ -1,0 +1,31 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: java-services
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames:
+      - applications
+  selector:
+    matchLabels:
+      app: api-service
+  endpoints:
+    - targetPort: 8080
+      path: /actuator/prometheus
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: worker-service
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames:
+      - applications
+  selector:
+    matchLabels:
+      app: worker-service
+  endpoints:
+    - targetPort: 8081
+      path: /actuator/prometheus

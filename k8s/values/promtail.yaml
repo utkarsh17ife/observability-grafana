@@ -1,7 +1,7 @@
 # Promtail values
 config:
   clients:
-    - url: http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
+    - url: http://loki-loki-distributed-gateway.observability.svc.cluster.local/loki/api/v1/push
   snippets:
     pipelineStages:
       - docker: {}

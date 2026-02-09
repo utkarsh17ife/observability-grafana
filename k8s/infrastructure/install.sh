@@ -11,14 +11,20 @@ ELASTICSEARCH_PASSWORD="${ELASTICSEARCH_PASSWORD:-changeme123}"
 DOMAIN="${DOMAIN:-local}"
 DATA_DIR="${DATA_DIR:-/data}"
 
-# Detect if running on Docker Desktop and use appropriate storage class
-if kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null | grep -q "docker-desktop"; then
+# Detect environment and use appropriate storage class
+FIRST_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+if echo "$FIRST_NODE" | grep -q "docker-desktop"; then
   STORAGE_CLASS="${STORAGE_CLASS:-hostpath}"
-  IS_DOCKER_DESKTOP=true
+  STANDALONE_MODE=true
   echo "Detected Docker Desktop - using hostpath storage class"
+elif echo "$FIRST_NODE" | grep -qE "minikube|observability"; then
+  STORAGE_CLASS="${STORAGE_CLASS:-standard}"
+  STANDALONE_MODE=true
+  echo "Detected Minikube - using standard storage class"
 else
   STORAGE_CLASS="${STORAGE_CLASS:-local-storage}"
-  IS_DOCKER_DESKTOP=false
+  STANDALONE_MODE=false
+  echo "Production mode - using local-storage class"
 fi
 
 echo "=== Infrastructure Services Installation ==="
@@ -35,8 +41,8 @@ kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f 
 echo "Creating applications namespace..."
 kubectl create namespace applications --dry-run=client -o yaml | kubectl apply -f -
 
-# Skip local PV creation for Docker Desktop (uses hostpath provisioner)
-if [ "$IS_DOCKER_DESKTOP" = "false" ]; then
+# Skip local PV creation for Docker Desktop/Minikube (uses dynamic provisioner)
+if [ "$STANDALONE_MODE" = "false" ]; then
 
 # Create Local Storage Class
 echo "Creating Local Storage Class..."
@@ -105,7 +111,7 @@ spec:
 EOF
 
 else
-  echo "Skipping local PV creation (Docker Desktop uses hostpath provisioner)"
+  echo "Skipping local PV creation (using dynamic provisioner)"
 fi
 
 # Add Helm repos
@@ -141,9 +147,8 @@ kubectl create secret docker-registry regcred \
 
 # Install MinIO
 echo "Installing MinIO..."
-if [ "$IS_DOCKER_DESKTOP" = "true" ]; then
-  # Standalone mode for Docker Desktop (single node)
-  # Use explicit image to avoid architecture issues
+if [ "$STANDALONE_MODE" = "true" ]; then
+  # Standalone mode for Docker Desktop / Minikube (single replica)
   helm upgrade --install minio minio/minio \
     -n $NAMESPACE \
     --set rootUser=$MINIO_ROOT_USER \
@@ -159,7 +164,10 @@ if [ "$IS_DOCKER_DESKTOP" = "true" ]; then
     --set mcImage.tag=latest \
     --set resources.requests.memory=512Mi \
     --set consoleService.type=ClusterIP \
-    --set service.type=ClusterIP
+    --set service.type=ClusterIP \
+    --set securityContext.runAsUser=0 \
+    --set securityContext.runAsGroup=0 \
+    --set securityContext.fsGroup=0
 else
   # Distributed mode for production (4 nodes)
   helm upgrade --install minio minio/minio \
@@ -180,7 +188,7 @@ helm upgrade --install registry twuni/docker-registry \
 echo ""
 echo "=== Installation Complete ==="
 
-if [ "$IS_DOCKER_DESKTOP" = "false" ]; then
+if [ "$STANDALONE_MODE" = "false" ]; then
 echo ""
 echo "=========================================="
 echo "IMPORTANT: Create directories on nodes BEFORE pods schedule:"

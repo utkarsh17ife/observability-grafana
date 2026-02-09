@@ -13,7 +13,7 @@ vmcluster:
       storage:
         volumeClaimTemplate:
           spec:
-            storageClassName: hostpath
+            storageClassName: standard
             resources:
               requests:
                 storage: 10Gi
@@ -57,7 +57,48 @@ vmagent:
         cpu: 500m
         memory: 512Mi
 
-# Grafana bundled with VM stack
 # Disable bundled Grafana - using separate Grafana helm chart
 grafana:
   enabled: false
+
+# Disable control plane scraping (not accessible in minikube)
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+# Enable kubelet scraping with TLS skip
+kubelet:
+  enabled: true
+  spec:
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+
+# Alerting - minimal config
+vmalert:
+  enabled: true
+  spec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+alertmanager:
+  enabled: true
+  spec:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

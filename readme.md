@@ -67,3 +67,21 @@ VictoriaMetrics (Metrics Storage)
   │ promtail-* │ Collects container logs, sends to Loki │ DaemonSet - 1 per node │                                                                     
   └────────────┴────────────────────────────────────────┴────────────────────────┘ 
 
+
+minikube start \
+  --nodes=3 \
+  --driver=docker \
+  --cpus=2 \
+  --memory=4096 \
+  --validate=false
+
+minikube start \
+    --nodes=3 \
+    --driver=docker \
+    --cpus=2 \
+    --memory=3072 \
+    --disk-size=20g \
+    --profile=observability
+
+minikube stop
+minikube delete --all --purge

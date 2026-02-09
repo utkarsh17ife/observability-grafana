@@ -7,7 +7,7 @@ Usage: ./load-test.sh [TOTAL_REQUESTS] [CONCURRENCY]
 
 Environment variables:
   K8S_MODE=true     Enable Kubernetes mode (auto port-forward)
-  NAMESPACE         Kubernetes namespace (default: observability)
+  NAMESPACE         Kubernetes namespace (default: applications)
   LOCAL_PORT        Local port for port-forward (default: 8080)
   API_URL           Override API URL directly
 
@@ -19,7 +19,7 @@ Examples:
   K8S_MODE=true ./load-test.sh 1000 5
 
   # Custom namespace
-  K8S_MODE=true NAMESPACE=my-ns ./load-test.sh 1000 5
+  K8S_MODE=true ./load-test.sh 1000 5
 
   # Direct URL
   API_URL=http://my-api:8080 ./load-test.sh 1000 5
@@ -27,7 +27,7 @@ EOF
     exit 0
 fi
 
-NAMESPACE="${NAMESPACE:-observability}"
+NAMESPACE="${NAMESPACE:-applications}"
 K8S_MODE="${K8S_MODE:-false}"
 LOCAL_PORT="${LOCAL_PORT:-8080}"
 API_URL="${API_URL:-http://localhost:$LOCAL_PORT}"

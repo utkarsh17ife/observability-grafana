@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker-service
-  namespace: observability
+  namespace: applications
   labels:
     app: worker-service
 spec:
@@ -47,7 +47,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: worker-service
-  namespace: observability
+  namespace: applications
   labels:
     app: worker-service
 spec:

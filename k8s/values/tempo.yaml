@@ -33,6 +33,8 @@ ingester:
   replicas: 1
   persistence:
     enabled: false
+  config:
+    replication_factor: 1
 
 distributor:
   replicas: 1
@@ -41,6 +43,8 @@ querier:
   replicas: 1
 
 queryFrontend:
+  service:
+    port: 3200
   replicas: 1
 
 compactor:

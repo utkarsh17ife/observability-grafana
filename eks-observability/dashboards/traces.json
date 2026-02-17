@@ -1,0 +1,277 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Trace Search",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {},
+      "title": "Trace Search Results",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "limit": 20,
+          "filters": [
+            {
+              "id": "service-name",
+              "tag": "resource.service.name",
+              "operator": "=",
+              "value": ["$service"],
+              "scope": "resource",
+              "valueType": "string"
+            },
+            {
+              "id": "min-duration",
+              "tag": "duration",
+              "operator": ">",
+              "value": ["$min_duration"],
+              "valueType": "duration"
+            }
+          ],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "id": 101,
+      "title": "Trace Metrics (from VictoriaMetrics)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "none" }
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Span Receive Rate (Tempo Distributor)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(tempo_distributor_spans_received_total{namespace=\"observability\"}[1m])) by (tenant)",
+          "legendFormat": "tenant: {{tenant}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "none" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Ingester Live Traces",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(tempo_ingester_live_traces{namespace=\"observability\"}) by (pod)",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "none" }
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Ingester Bytes Received Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(tempo_distributor_bytes_received_total{namespace=\"observability\"}[1m]))",
+          "legendFormat": "bytes/sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "none" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Compactor Blocks",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(tempo_compactor_outstanding_blocks{namespace=\"observability\"}) by (tenant)",
+          "legendFormat": "outstanding - {{tenant}}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(tempo_compactor_blocks_total{namespace=\"observability\"}) by (tenant)",
+          "legendFormat": "total - {{tenant}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
+      "id": 102,
+      "title": "Trace by ID",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 31 },
+      "id": 6,
+      "options": {},
+      "title": "Trace Detail",
+      "type": "traces",
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceql",
+          "query": "$trace_id",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["tempo", "traces", "otel"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "", "value": "" },
+        "name": "service",
+        "options": [
+          { "selected": false, "text": "api-service", "value": "api-service" },
+          { "selected": false, "text": "worker-service", "value": "worker-service" }
+        ],
+        "query": "api-service,worker-service",
+        "type": "custom"
+      },
+      {
+        "current": { "selected": false, "text": "100ms", "value": "100ms" },
+        "name": "min_duration",
+        "options": [
+          { "selected": false, "text": "0ms", "value": "0ms" },
+          { "selected": true, "text": "100ms", "value": "100ms" },
+          { "selected": false, "text": "500ms", "value": "500ms" },
+          { "selected": false, "text": "1s", "value": "1s" },
+          { "selected": false, "text": "5s", "value": "5s" }
+        ],
+        "query": "0ms,100ms,500ms,1s,5s",
+        "type": "custom"
+      },
+      {
+        "current": { "selected": false, "text": "", "value": "" },
+        "name": "trace_id",
+        "options": [{ "selected": true, "text": "", "value": "" }],
+        "query": "",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "[Tempo] Traces",
+  "uid": "tempo-traces",
+  "version": 1
+}

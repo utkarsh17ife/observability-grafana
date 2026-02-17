@@ -1,0 +1,217 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Deployment Overview",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "logs/sec",
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Log Volume by Deployment",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({namespace=~\"$namespace\", app=~\"$deployment\"}[$__interval])) by (app)",
+          "legendFormat": "{{app}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "errors/sec",
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Error Volume by Deployment",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({namespace=~\"$namespace\", app=~\"$deployment\"} |~ \"(?i)(error|exception|fatal|panic)\"[$__interval])) by (app)",
+          "legendFormat": "{{app}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisLabel": "logs/sec",
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 7 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Log Volume by Pod (within Deployment)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({namespace=~\"$namespace\", app=~\"$deployment\"}[$__interval])) by (pod)",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "id": 101,
+      "title": "Deployment Logs",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 22, "w": 24, "x": 0, "y": 14 },
+      "id": 4,
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      },
+      "title": "Logs",
+      "type": "logs",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{namespace=~\"$namespace\", app=~\"$deployment\"} |~ \"$search\" $level_filter",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["loki", "logs", "kubernetes", "deployment"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "loki", "uid": "loki" },
+        "definition": "label_values(namespace)",
+        "includeAll": false,
+        "multi": false,
+        "name": "namespace",
+        "query": "label_values(namespace)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "loki", "uid": "loki" },
+        "definition": "label_values({namespace=~\"$namespace\"}, app)",
+        "includeAll": true,
+        "multi": true,
+        "name": "deployment",
+        "query": "label_values({namespace=~\"$namespace\"}, app)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": { "selected": false, "text": "", "value": "" },
+        "name": "search",
+        "options": [{ "selected": true, "text": "", "value": "" }],
+        "query": "",
+        "type": "textbox"
+      },
+      {
+        "current": { "selected": true, "text": "All", "value": "" },
+        "name": "level_filter",
+        "options": [
+          { "selected": true, "text": "All", "value": "" },
+          { "selected": false, "text": "Errors Only", "value": "|~ \"(?i)(error|exception|fatal|panic)\"" },
+          { "selected": false, "text": "Warnings+", "value": "|~ \"(?i)(warn|error|exception|fatal|panic)\"" },
+          { "selected": false, "text": "Info+", "value": "|~ \"(?i)(info|warn|error|exception|fatal|panic)\"" }
+        ],
+        "query": "",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "[Loki] Deployment Logs",
+  "uid": "deployment-logs",
+  "version": 1
+}

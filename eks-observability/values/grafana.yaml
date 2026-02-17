@@ -1,0 +1,95 @@
+adminUser: admin
+adminPassword: admin
+
+image:
+  tag: "11.3.0"
+
+persistence:
+  enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://vmselect-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8481/select/0/prometheus
+        isDefault: true
+        jsonData:
+          timeInterval: 30s
+
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki-loki-distributed-gateway.observability.svc.cluster.local
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: 'traceId[=:]\\s*([a-fA-F0-9]+)'
+              name: TraceID
+              url: '$${__value.raw}'
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo-query-frontend.observability.svc.cluster.local:3200
+        basicAuth: false
+        # CRITICAL: Add this to force HTTP mode
+        editable: false
+        jsonData:
+          httpMethod: GET
+          # Disable all features that use gRPC
+          search:
+            hide: true
+          # Keep these as you have them
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: '-5m'
+            spanEndTimeShift: '5m'
+            filterByTraceID: true
+            filterBySpanID: false
+            customQuery: true
+            query: '{namespace="applications"} |= "$${__span.traceId}"'
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: '-5m'
+            spanEndTimeShift: '5m'
+            tags:
+              - key: service.name
+                value: application
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          lokiSearch:
+            datasourceUid: loki
+          # Add empty tracesToProfiles to avoid gRPC
+          tracesToProfiles:
+            datasourceUid: null
+
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: observability
+
+grafana.ini:
+  feature_toggles:
+    enable: traceqlEditor
+    # Disable the problematic features
+    tempoSearch: false
+    tempoServiceGraph: false
+    tempoApmTable: false
+  auth.anonymous:
+    enabled: true
+    org_role: Admin
+  server:
+    root_url: http://localhost:3000
+  # Disable grafana-apiserver if not needed
+  grafana-apiserver:
+    enabled: false

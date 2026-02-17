@@ -1,0 +1,108 @@
+# VictoriaMetrics values (Docker Desktop - single node)
+vmsingle:
+  enabled: false
+
+vmcluster:
+  enabled: true
+  spec:
+    retentionPeriod: 30d
+    replicationFactor: 1
+    vmstorage:
+      replicaCount: 1
+      storageDataPath: /vm-data
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: standard
+            resources:
+              requests:
+                storage: 10Gi
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2
+          memory: 4Gi
+    vmselect:
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 2Gi
+    vminsert:
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 2Gi
+
+vmagent:
+  enabled: true
+  spec:
+    scrapeInterval: 30s
+    externalLabels:
+      cluster: production
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# Disable bundled operator - installed separately via vm-operator release
+victoria-metrics-operator:
+  enabled: false
+
+# Disable bundled Grafana - using separate Grafana helm chart
+grafana:
+  enabled: false
+
+# Disable control plane scraping (not accessible in minikube)
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+# Enable kubelet scraping with TLS skip
+kubelet:
+  enabled: true
+  spec:
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+
+# Alerting - minimal config
+vmalert:
+  enabled: true
+  spec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+alertmanager:
+  enabled: true
+  spec:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

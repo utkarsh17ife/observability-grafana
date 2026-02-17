@@ -1,0 +1,55 @@
+# Tempo values (Docker Desktop - single node, S3 storage via MinIO)
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: tempo-traces
+      endpoint: minio.infrastructure.svc.cluster.local:9000
+      access_key: ${MINIO_ACCESS_KEY}
+      secret_key: ${MINIO_SECRET_KEY}
+      insecure: true
+    blocklist_poll: 5m
+
+# Enable OTLP receiver
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+
+tempo:
+  retention: 720h
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+# Single replicas for Docker Desktop
+ingester:
+  replicas: 1
+  persistence:
+    enabled: false
+  config:
+    replication_factor: 1
+
+distributor:
+  replicas: 1
+
+querier:
+  replicas: 1
+
+queryFrontend:
+  service:
+    port: 3200
+  replicas: 1
+
+compactor:
+  enabled: true
+
+serviceAccount:
+  create: true
+  name: tempo
